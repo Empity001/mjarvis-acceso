@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>M-Jarvis</title>
+<style>
+:root { --tinta: #05070b; --texto: #f3f6fb; --tenue: #aab4c4; --animo: #6aa9ff; --aviso: #f5a623; --salida: cubic-bezier(.16, 1, .3, 1); }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 16px; color: var(--texto); background: var(--tinta);
+  font: 16px/1.5 "Instrument Sans Variable", system-ui, "Segoe UI", sans-serif;
+  background-image: radial-gradient(60vmax 60vmax at 15% -10%, rgba(106, 169, 255, .28), transparent), radial-gradient(50vmax 50vmax at 100% 110%, rgba(150, 90, 200, .2), transparent); }
+main { width: min(100%, 380px); padding: 28px 24px 24px; border-radius: 26px; background: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 22px 44px -16px rgba(0,0,0,.65); animation: entra .5s var(--salida) both; }
+h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+p { margin: 0 0 18px; color: var(--tenue); font-size: 15px; }
+.punto { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: var(--animo); animation: late 1.4s ease-in-out infinite; }
+.fuera .punto { background: var(--aviso); animation: none; }
+a.boton, button { display: block; width: 100%; padding: 13px; border: 0; border-radius: 14px; background: var(--animo); color: #06101f; font: inherit; font-weight: 600; text-align: center;
+  text-decoration: none; cursor: pointer; transition: transform .18s var(--salida); }
+a.boton:active, button:active { transform: scale(.98); }
+a.boton:focus-visible, button:focus-visible { outline: 2px solid var(--animo); outline-offset: 2px; }
+small { display: block; margin-top: 12px; color: var(--tenue); font-size: 13px; }
+[hidden] { display: none !important; }
+@keyframes entra { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+@keyframes late { 50% { opacity: .35; transform: scale(.8); } }
+@media (prefers-reduced-motion: reduce) { main, .punto { animation: none; } a.boton, button { transition: none; } }
+</style>
+</head>
+<body>
+<main id="caja">
+  <h1>M-Jarvis</h1>
+  <p id="estado" role="status"><span class="punto"></span>Buscando a Jarvis…</p>
+  <a class="boton" id="abrir" hidden>Abrir M-Jarvis</a>
+  <button id="reintentar" type="button" hidden>Buscar otra vez</button>
+  <small id="nota"></small>
+</main>
+<script>
+const caja = document.getElementById('caja'), estado = document.getElementById('estado'), abrir = document.getElementById('abrir'), otra = document.getElementById('reintentar'), nota = document.getElementById('nota');
+const hace = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; if (!(s >= 0)) return ''; return s < 90 ? 'hace un momento' : s < 5400 ? `hace ${Math.round(s / 60)} min` : s < 129600 ? `hace ${Math.round(s / 3600)} h` : `hace ${Math.round(s / 86400)} días`; };
+async function buscar() {
+  otra.hidden = true; abrir.hidden = true; caja.classList.remove('fuera'); nota.textContent = '';
+  estado.replaceChildren(Object.assign(document.createElement('span'), { className: 'punto' }), 'Buscando a Jarvis…');
+  try {
+    const r = await fetch('destino.json?' + Date.now(), { cache: 'no-store' });
+    const d = await r.json();
+    let url = '';
+    try { const u = new URL(d.url); if (u.protocol === 'https:' && u.hostname.endsWith('.trycloudflare.com')) url = u.origin; } catch (e) {}
+    if (!url) throw new Error('fuera');
+    abrir.href = url + '/#control'; abrir.hidden = false;
+    estado.replaceChildren(Object.assign(document.createElement('span'), { className: 'punto' }), 'Jarvis está en línea.');
+    nota.textContent = d.actualizado ? 'Dirección publicada ' + hace(d.actualizado) + '.' : '';
+    let ya = false; try { ya = !!sessionStorage.getItem('mj-ya-abri'); sessionStorage.setItem('mj-ya-abri', '1'); } catch (x) {}
+    if (!ya) setTimeout(() => location.replace(abrir.href), 500);   // solo la primera vez en esta pestaña: si vuelves atrás, te quedas aquí
+  } catch (e) {
+    caja.classList.add('fuera');
+    estado.replaceChildren(Object.assign(document.createElement('span'), { className: 'punto' }), 'Jarvis no está en línea ahora.');
+    nota.textContent = 'Revisa que la Latitude esté encendida y con internet; al volver, esta página lo encuentra sola.';
+    otra.hidden = false;
+  }
+}
+otra.onclick = () => { try { sessionStorage.removeItem('mj-ya-abri'); } catch (e) {} buscar(); };
+buscar();
+</script>
+</body>
+</html>
